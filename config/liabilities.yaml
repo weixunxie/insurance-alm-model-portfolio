@@ -1,0 +1,20 @@
+# Hypothetical life insurer liability block (fixed / payout annuities + some life benefits).
+# SYNTHETIC ASSUMPTIONS throughout; stylized, NOT an actuarial projection.
+horizon_years: 30
+target_pv: 90.0              # USD millions; PV(L) on the base Treasury spot curve (economic view, no spread)
+
+benefits:                    # per-unit benefit shape B_t = t^k * exp(-t / theta); scaled to hit target_pv
+  k: 1.5
+  theta: 8.0                 # calibrated so Macaulay duration lands in 9-11 years
+
+lapse:                       # surrender rate on in-force, paid at the reserve value (no surrender charge)
+  base_rate: 0.04            # years 1-10
+  ultimate_rate: 0.02        # reached at year 15, linear decline years 10-15
+  decline_start: 10
+  decline_end: 15
+
+expense_pct_of_benefits: 0.03
+
+# SIMPLIFICATIONS: lapses are not rate-dependent (no dynamic lapse); the surrender value equals the
+# economic reserve V_t (PV of remaining benefits on the base curve); statutory reserves use prescribed
+# valuation rates and would differ.

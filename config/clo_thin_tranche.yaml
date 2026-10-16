@@ -1,0 +1,10 @@
+# Thin-tranche CLO surcharge. REGULATORY RULE (Proposal 2026-12-IRE MOD, LR002 form) with a MODELING CHOICE.
+# Applies to tranches of broadly syndicated loan (BSL) CLOs, designated NAIC 2.C or below, with thickness <= 4%.
+# AMBIGUITY: the form's treatment (line 7.2) can be read either as an ADD-ON to the designation factor or as a
+# REPLACEMENT factor. This model uses the add-on reading: factor = designation factor + surcharge.
+# Check: 2.C 0.03280 + 0.1177 = 0.1505, consistent with the 15.05% thin 2.C charge reported by secondary sources.
+surcharge: 0.1177
+collateral: BSL
+min_designation: 2.C          # applies at this designation and below (2.C, 3.A, ..., 6)
+max_thickness: 0.04
+mode: add_on                  # only add_on is implemented

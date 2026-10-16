@@ -1,0 +1,242 @@
+<!-- GENERATED FILE: edit docs/templates/README.md.tmpl, then run scripts/run_all.py. Numbers come from outputs/metrics.json. -->
+# NAIC-Constrained Insurance ALM Model Portfolio
+
+**Capital charge, KRD exposure and cash flow matching for a hypothetical U.S. life insurer**
+
+This project is a reproducible Python model that builds a fixed income model portfolio (Investment Grade, High Yield and Structured Products) for a hypothetical life insurer. It optimizes expected net spread income subject to three constraints:
+
+- a simplified NAIC Life RBC C-1 bond capital budget
+- key rate duration (KRD) limits against the liabilities
+- a cash flow funding test
+
+> **Educational model on illustrative, synthetic data.** It is not production insurance modeling, not an actuarial valuation, and not a statutory RBC calculation. No output is an RBC ratio. Every assumption is labeled in [docs/assumptions.md](docs/assumptions.md).
+
+## Business case
+
+The insurer holds **${{inputs.total_assets|.0f}}M** of investable assets against fixed / payout annuity and life liabilities with **PV ${{inputs.liability_pv_target|.0f}}M**. The liabilities have a Macaulay duration of {{phase2.liability_macaulay|.1f}} years and a DV01 of ${{phase2.liability_dv01_usd_k_per_bp|.1f}}k per bp. The portfolio manager wants more spread income, but every extra dollar of spread costs something:
+
+- **Regulatory capital**: NAIC C-1 factors rise steeply below investment grade, and new 12/31/2026 factors apply to CLOs.
+- **Interest rate risk**: economic surplus is exposed to curve moves, not just parallel shifts.
+- **Liquidity**: asset cash flows must fund liability payments in years 1–{{inputs.funding.check_years}}.
+
+## Method
+
+| Module | What it does | Code |
+|---|---|---|
+| Fixed income analytics | Spot-curve pricing, YTM, Macaulay / modified / effective duration, convexity, DV01, KRD (triangular 1bp bumps at 1, 2, 3, 5, 7, 10, 20 and 30Y), spread duration | `curve.py`, `bonds.py`, `krd.py` |
+| Universe | {{phase2.universe_size}} securities: Treasuries / STRIPS, IG and HY corporates, Agency MBS (CPR), non-agency RMBS, CMBS (balloon), ABS, CLO floaters. Includes a sequential-pay waterfall demo | `structured.py`, `universe.py` |
+| Liabilities | Hump-shaped benefits + surrenders + expenses, scaled to the target PV | `liabilities.py` |
+| **A. Cash flow matching** | Annual gaps, coverage, cumulative funding balance with reinvestment at 1Y forwards and borrowing at forward + spread | `cashflow_matching.py` |
+| **B. KRD exposure** | Asset vs liability key rate DV01, duration gap, surplus scenarios by full repricing vs the KRD approximation | `krd_exposure.py` |
+| **C. NAIC capital** | Market value × C-1 factor by designation; 2026 CLO factors (thin-tranche surcharge for BSL tranches at 2.C or below) | `capital.py` |
+| Optimization | LP (CVXPY + HiGHS): max Σ x(s − EL) subject to capital, per-tenor KRD and surplus DV01, funding, bucket / issuer / liquidity limits, **full-repricing scenario surplus limits** and a **downgrade capital buffer**. Reports duals, slack and binding rows, the frontier, and infeasibility diagnosis | `optimizer.py`, `scenario_constraints.py` |
+| Portfolios and stress | A (conservative IG), B (yield seeking), C (optimized); 13 stress scenarios; robustness simulation with out-of-sample check | `portfolios.py`, `stress.py`, `robustness.py` |
+| Phase 6 analytics | Rate-dependent Agency MBS prepayment (negative convexity), spread DV01, notch-downgrade sensitivity, receive-fixed swap overlay | `structured.py`, `migration.py`, `overlay.py` |
+
+### Matching concepts in one paragraph
+
+- **Cash flow matching** checks year-by-year funding: does each year's asset inflow, plus any balance carried forward, cover that year's liability outflow?
+- **Duration matching** equates asset and liability DV01, which protects surplus against *parallel* moves only.
+- **KRD matching** equates DV01 tenor by tenor, which also protects against *curve-shape* moves.
+
+Portfolio A shows why all three are needed. Its duration gap is only {{phase3.portfolio_A.duration_gap_years|+.2f}} years, but its net key rate DV01 is {{phase5.portfolios.A.net_krd_30y_k|+.1f}}k at 30Y and {{phase5.portfolios.A.net_krd_20y_k|+.1f}}k at 20Y (USD per bp), so a steepener changes its surplus by {{phase5.stress.A_steepener_dS|+.2f}} (USD millions). See [docs/methodology.md](docs/methodology.md).
+
+### Worked toy example (cash flow funding)
+
+| Year | Assets | Liabilities | Gap | Cumulative (before reinvestment) |
+|---|---|---|---|---|
+| 1 | 6 | 4 | +2 | +2 |
+| 2 | 3 | 5 | −2 | 0 |
+
+With reinvestment at 4%, the year-2 balance is 2 × 1.04 − 2 = +0.08 (`tests/test_cashflow_matching.py`). <!-- static -->
+
+## Key results
+
+All figures are in USD millions unless noted and come from [outputs/metrics.json](outputs/metrics.json). Capital budget K = ${{inputs.capital_budget|.2f}}M.
+
+| Metric | A Conservative IG | B Yield seeking | C Optimized ALM |
+|---|---|---|---|
+| Net spread income (after EL), per year | {{phase5.portfolios.A.net_spread_income|.3f}} | {{phase5.portfolios.B.net_spread_income|.3f}} | {{phase5.portfolios.C.net_spread_income|.3f}} |
+| Expected credit loss, per year | {{phase5.portfolios.A.expected_credit_loss|.3f}} | {{phase5.portfolios.B.expected_credit_loss|.3f}} | {{phase5.portfolios.C.expected_credit_loss|.3f}} |
+| Portfolio yield | {{phase5.portfolios.A.yield|.2%}} | {{phase5.portfolios.B.yield|.2%}} | {{phase5.portfolios.C.yield|.2%}} |
+| Asset effective duration (years) | {{phase5.portfolios.A.effective_duration|.2f}} | {{phase5.portfolios.B.effective_duration|.2f}} | {{phase5.portfolios.C.effective_duration|.2f}} |
+| Surplus DV01 ($k per bp; limit ± {{inputs.rate_risk.surplus_dv01_max|.0f}}) | {{phase5.portfolios.A.surplus_dv01_k|+.1f}} | {{phase5.portfolios.B.surplus_dv01_k|+.1f}} | {{phase5.portfolios.C.surplus_dv01_k|+.1f}} |
+| Max \|net key rate DV01\| ($k per bp) | {{phase5.portfolios.A.max_abs_net_krd_k|.1f}} | {{phase5.portfolios.B.max_abs_net_krd_k|.1f}} | {{phase5.portfolios.C.max_abs_net_krd_k|.1f}} |
+| Key rate tenors outside tolerance | {{phase5.portfolios.A.krd_tenors_breaching|.0f}} | {{phase5.portfolios.B.krd_tenors_breaching|.0f}} | {{phase5.portfolios.C.krd_tenors_breaching|.0f}} |
+| **Rate limits met (surplus DV01 and every KRD tenor)** | **{{phase5.portfolios.A.rate_limits_ok}}** | **{{phase5.portfolios.B.rate_limits_ok}}** | **{{phase5.portfolios.C.rate_limits_ok}}** |
+| Modeled C-1 charge (budget utilization) | {{phase5.portfolios.A.capital_charge|.3f}} ({{phase5.portfolios.A.budget_utilization|.0%}}) | {{phase5.portfolios.B.capital_charge|.3f}} ({{phase5.portfolios.B.budget_utilization|.0%}}) | {{phase5.portfolios.C.capital_charge|.3f}} ({{phase5.portfolios.C.budget_utilization|.0%}}) |
+| Capital efficiency (net income / charge) | {{phase5.portfolios.A.capital_efficiency|.2f}} | {{phase5.portfolios.B.capital_efficiency|.2f}} | {{phase5.portfolios.C.capital_efficiency|.2f}} |
+| Δ surplus, rates +100bp | {{phase5.stress.A_parallel_up_100_dS|+.2f}} | {{phase5.stress.B_parallel_up_100_dS|+.2f}} | {{phase5.stress.C_parallel_up_100_dS|+.2f}} |
+| Δ surplus, rates −100bp | {{phase5.stress.A_parallel_down_100_dS|+.2f}} | {{phase5.stress.B_parallel_down_100_dS|+.2f}} | {{phase5.stress.C_parallel_down_100_dS|+.2f}} |
+| Δ surplus, steepener (−50bp at 1Y to +50bp at 30Y) | {{phase5.stress.A_steepener_dS|+.2f}} | {{phase5.stress.B_steepener_dS|+.2f}} | {{phase5.stress.C_steepener_dS|+.2f}} |
+| Δ surplus, HY (NAIC 3+) spreads +200bp | {{phase5.stress.A_hy_spread_up_200_dS|+.2f}} | {{phase5.stress.B_hy_spread_up_200_dS|+.2f}} | {{phase5.stress.C_hy_spread_up_200_dS|+.2f}} |
+
+- Stress capital uses a book-value proxy (t0 market value × factor). The mark-to-market charge is reported as a sensitivity in `outputs/tables/stress_mvp.csv`.
+- **Portfolio A breaches the surplus DV01 limit** ({{phase5.portfolios.A.surplus_dv01_k|+.2f}}k vs ± {{inputs.rate_risk.surplus_dv01_max|.0f}}k) once Agency MBS prepayment responds to rates. Under constant CPR it was {{phase6.prepay_sensitivity.A_surplus_dv01_k_constant_cpr|+.2f}}k. Static allocations drift out of tolerance when prepayment behavior changes.
+
+**Optimization findings**
+
+- **Shadow price of the capital budget K: {{phase4.shadow_price_capital|.3f}}.** K appears in two rows, the C-1 charge ≤ K and the post-downgrade charge ≤ {{inputs.downgrade_buffer_multiple|.2f}}·K. So dIncome/dK = dual_capital + {{inputs.downgrade_buffer_multiple|.2f}} × dual_buffer. At the base budget, one more dollar of K adds about ${{phase4.shadow_price_capital|.2f}} a year of net spread. The value is {{phase4.frontier_shadow_at_min_budget|.2f}} at K = ${{inputs.frontier.min|.2f}}M and 0 once capital used reaches ${{phase4.frontier_capital_at_max_budget|.2f}}M, where the frontier tops out at {{phase4.frontier_income_at_max_budget|.3f}} and the HY, CLO and issuer limits bind instead.
+- **Why the LP does not swap more BBB into HY.** A ${{phase4.swap_bbb_to_bbplus.amount|.0f}}M BBB → BB+ swap earns {{phase4.swap_bbb_to_bbplus.income_gain|.2%}} of spread for {{phase4.swap_bbb_to_bbplus.capital_change|.2%}} of capital, but the HY (NAIC 3+) limit is binding with a dual of {{phase4.swap_bbb_to_bbplus.hy_max_dual|.4f}}. Priced at all binding duals, the swap's reduced cost is {{phase4.swap_bbb_to_bbplus.reduced_cost|.1e}}.
+- **CLO factor regime.**
+  - (a) C's holdings repriced on the old bond factors need ${{phase4.clo_regime.C_capital_old_bond_same_holdings|.3f}}M of capital, versus ${{phase4.clo_regime.C_capital_new_2026|.3f}}M under the 2026 CLO factors.
+  - (b) Re-optimized on the old factors, the LP buys more CLO BB ({{phase4.clo_bb_new_2026|.2f}} → {{phase4.clo_bb_old_bond|.2f}}) and earns {{phase4.clo_regime.reoptimized_old_bond_income|.3f}} using ${{phase4.clo_regime.reoptimized_old_bond_capital|.3f}}M of capital.
+  - The 2026 factors raise BBB tranches to {{inputs.factors.clo_2B|.3%}} (from {{inputs.factors.bond_2B|.3%}}) and BB tranches to {{inputs.factors.clo_3B|.3%}} (from {{inputs.factors.bond_3B|.3%}}).
+- **Robustness and the optimizer's curse.** Over {{phase5.robustness.n_draws}} draws (spreads × N(1, {{inputs.robustness.spread_sd|.2f}}), PDs × mean-one lognormal with σ = {{inputs.robustness.pd_sigma|.2f}}):
+
+  | | Mean income |
+  |---|---|
+  | Re-optimized, in-sample | {{phase5.robustness.income_reopt_in_sample_mean|.3f}} |
+  | Base C held fixed, same draws | {{phase5.robustness.income_fixed_C_mean|.3f}} |
+  | Re-optimized, out-of-sample | {{phase5.robustness.income_reopt_out_of_sample_mean|.3f}} |
+
+  - The in-sample gap of {{phase5.robustness.optimizers_curse_gap|+.4f}} is the optimizer's curse.
+  - Out-of-sample, re-optimized portfolios minus fixed C: {{phase5.robustness.oos_minus_fixed_C|+.4f}}.
+
+C does not win every metric. A has the best capital efficiency and gains when rates fall, and B earns slightly more income by breaking the capital and rate limits. C is the only portfolio inside every limit, and it pays for that with a short-duration position ({{phase5.stress.C_parallel_down_100_dS|+.2f}} at −100bp) and more spread risk.
+
+## Scenario constraints and downgrade buffer
+
+The duration and KRD rows are linear, so they cannot see negative convexity. The model adds one exact, still linear row per curve scenario. Each row uses the full-repricing value change per dollar of every security, with cash flows re-projected on the shocked curve:
+
+> ΔA_s(x) − ΔL_s ≥ −{{inputs.scenario_max_loss|.2f}} for s ∈ {+100bp, −100bp, steepener, flattener}
+
+It also adds a **downgrade buffer**: capital after a one-notch BBB-family downgrade ≤ {{inputs.downgrade_buffer_multiple|.2f}} × K. Both are switchable in `config/policy.yaml`. A test checks that the LP rows reproduce the stress engine's full-repricing ΔS exactly.
+
+| Portfolio C | Before | After |
+|---|---|---|
+| Net spread income per year | {{phase6.constraints.income_before|.4f}} | {{phase6.constraints.income_after|.4f}} |
+| Δ surplus, −100bp | {{phase6.constraints.dS_parallel_down_100_C_before|+.3f}} | {{phase6.constraints.dS_parallel_down_100_C_after|+.3f}} |
+| Δ surplus, +100bp | {{phase6.constraints.dS_parallel_up_100_C_before|+.3f}} | {{phase6.constraints.dS_parallel_up_100_C_after|+.3f}} |
+| Δ surplus, combined adverse (B: {{phase6.constraints.dS_combined_adverse_B|+.3f}}) | {{phase6.constraints.dS_combined_adverse_C_before|+.3f}} | {{phase6.constraints.dS_combined_adverse_C_after|+.3f}} |
+| Surplus DV01 ($k per bp) | {{phase6.constraints.surplus_dv01_before|+.2f}} | {{phase6.constraints.surplus_dv01_after|+.2f}} |
+| Capital after one-notch BBB downgrade (limit {{report.downgrade_buffer_limit|.2f}}) | {{phase6.constraints.capital_downgraded_before|.3f}} | {{phase6.constraints.capital_downgraded_after|.3f}} |
+
+- **Binding scenario:** −100bp, with a dual of {{phase6.constraints.dual_scenario_parallel_down_100|.4f}}. Each extra dollar of allowed −100bp loss is worth about that much income a year.
+- **Downgrade buffer:** binding, with a dual of {{phase6.constraints.dual_downgrade_buffer|.4f}}.
+- **Costs in income:** the scenario rows cost {{phase6.constraints.scenario_cost|.4f}} a year, and the downgrade buffer a further {{phase6.constraints.buffer_cost|.4f}}.
+- **Combined adverse:** before the constraints C lost more than B; after them it loses less.
+- **Optional HY-count row** (off by default): NAIC 3+ holdings after the same one-notch BBB downgrade ≤ {{inputs.limits.hy_max|.0f}}. Switching it on cuts income to {{phase6.constraints.income_with_hy_after_downgrade_limit|.4f}}, a cost of {{phase6.constraints.hy_after_downgrade_limit_cost|.4f}} a year. It forces BBB− names out, because each of them becomes 3.A.
+
+**The swap overlay with scenario constraints on.** Receivers make −100bp protection almost free:
+
+| Allowed −100bp loss | Income, cash bonds only | Income, with overlay |
+|---|---|---|
+| {{report.sweep.loosest_limit|.2f}} | {{report.sweep.loosest_no_overlay|.4f}} | {{report.sweep.loosest_with_overlay|.4f}} |
+| {{report.sweep.tightest_limit|.2f}} | {{report.sweep.tightest_no_overlay|.4f}} | {{report.sweep.tightest_with_overlay|.4f}} |
+
+- Tightening the −100bp loss limit from the loosest to the tightest value costs {{headline.cost_to_zero_down_100_loss_no_overlay|.4f}} a year with cash bonds, but only {{headline.cost_to_zero_down_100_loss_with_overlay|.4f}} with the overlay.
+- At the base limit, the −100bp dual falls from {{phase6.constraints.dual_scenario_parallel_down_100|.4f}} to {{phase6.overlay.dual_parallel_down_C_swaps|.4f}}.
+
+## Phase 6 analytics
+
+**Negative convexity.** Agency MBS prepayment follows an S-curve in the 10Y rate (`config/prepayment.yaml`, illustrative):
+
+| FNMA 30Y | Constant CPR | Rate-dependent CPR |
+|---|---|---|
+| Effective duration (years) | {{phase6.mbs.FNMA_30Y_constant_effective_dur|.2f}} | {{phase6.mbs.FNMA_30Y_rate_dependent_effective_dur|.2f}} |
+| Effective convexity (±25bp) | {{phase6.mbs.FNMA_30Y_constant_effective_conv|.0f}} | {{phase6.mbs.FNMA_30Y_rate_dependent_effective_conv|.0f}} |
+
+- The duration rows alone are linear and miss convexity, which is why the scenario rows above exist.
+- For the final C, full repricing gives a surplus change of {{phase4.portfolio_C.dS_full_parallel_up_100|+.2f}} at +100bp and {{phase4.portfolio_C.dS_full_parallel_down_100|+.2f}} at −100bp, compared with {{phase4.portfolio_C.dS_krd_parallel_up_100|+.2f}} / {{phase4.portfolio_C.dS_krd_parallel_down_100|+.2f}} from the linear KRD estimate. Both directions come out worse.
+
+**Spread DV01** (value lost per +1bp of spread, USD thousands). Treasuries and STRIPS have no credit spread and are excluded. Agency MBS spread is OAS / basis risk, not credit risk, so it is shown separately:
+
+| | A | B | C |
+|---|---|---|---|
+| Credit spread DV01 (IG, HY, RMBS, CMBS, ABS, CLO) | {{phase6.spread_dv01.credit_total.A|.1f}} | {{phase6.spread_dv01.credit_total.B|.1f}} | {{phase6.spread_dv01.credit_total.C|.1f}} |
+| Agency MBS OAS / basis DV01 | {{phase6.spread_dv01.agency_mbs.A|.1f}} | {{phase6.spread_dv01.agency_mbs.B|.1f}} | {{phase6.spread_dv01.agency_mbs.C|.1f}} |
+
+CLO floaters carry almost no rate DV01 but full spread DV01.
+
+**Downgrades (Portfolio C, all eligible holdings).**
+- One notch adds {{phase6.downgrade.C_ALL_1n_d_capital|.3f}} of capital, and two notches add {{phase6.downgrade.C_ALL_2n_d_capital|.3f}}, against a budget of {{inputs.capital_budget|.2f}}.
+- One notch lifts NAIC 3+ holdings to {{phase6.downgrade.C_ALL_1n_hy_after|.1f}}, above the {{inputs.limits.hy_max|.0f}} limit, because BBB− names become 3.A.
+
+**Stress highlights** (all 13 scenarios: `outputs/tables/stress_all.csv` and figure `f4`):
+
+| Scenario | A | B | C |
+|---|---|---|---|
+| Combined adverse (−100bp, IG +50, NAIC 3+ +200, BBB −1 notch): Δ surplus | {{phase6.stress.A_combined_adverse_dS|+.2f}} | {{phase6.stress.B_combined_adverse_dS|+.2f}} | {{phase6.stress.C_combined_adverse_dS|+.2f}} |
+| Fallen angels (all BBB → 3.A): capital charge | {{phase6.stress.A_fallen_angels_bbb_to_3A_capital_charge|.3f}} | {{phase6.stress.B_fallen_angels_bbb_to_3A_capital_charge|.3f}} | {{phase6.stress.C_fallen_angels_bbb_to_3A_capital_charge|.3f}} |
+| Surrenders +{{inputs.scenarios.lapse_increase|.0%}} in years 1–5: minimum funding balance, years 1–{{inputs.funding.check_years}} | {{phase6.stress.A_surrenders_up_50pct_y1_5_min_funding_y1_to_check|+.2f}} | {{phase6.stress.B_surrenders_up_50pct_y1_5_min_funding_y1_to_check|+.2f}} | {{phase6.stress.C_surrenders_up_50pct_y1_5_min_funding_y1_to_check|+.2f}} |
+| NAIC 3+ defaults ×2, recovery −10 points: Δ net income per year | {{phase6.stress.A_hy_defaults_x2_d_net_income|+.3f}} | {{phase6.stress.B_hy_defaults_x2_d_net_income|+.3f}} | {{phase6.stress.C_hy_defaults_x2_d_net_income|+.3f}} |
+
+- Surrenders are paid at the reserve value, so liability PV barely moves. The risk is liquidity: Portfolio A's funding balance goes negative.
+- **Tighter capital (K × {{inputs.scenarios.tight_budget_mult|.2f}} = {{phase6.tight_capital.budget|.2f}})**: C would sit at {{phase6.tight_capital.C_utilization_at_tight_budget|.0%}} of the new budget. Re-optimizing changes income by {{phase6.tight_capital.income_change|+.3f}} a year, and NAIC 3+ holdings fall to {{phase6.tight_capital.hy_after|.1f}}.
+
+**Receive-fixed swap overlay** (zero modeled C-1, carry {{phase6.overlay.carry_bp|+.0f}}bp a year, notional cap {{phase6.overlay.max_notional|.0f}}):
+
+| | C | C with overlay |
+|---|---|---|
+| Net spread income per year | {{phase6.prepay_C_income_rate_dependent|.3f}} | {{phase6.overlay.income|.3f}} |
+| Treasuries / STRIPS held | {{phase6.overlay.treasury_C|.1f}} | {{phase6.overlay.treasury_C_swaps|.1f}} |
+| Swap notional (20Y / 30Y) | – | {{phase6.overlay.notional_20y|.1f}} / {{phase6.overlay.notional_30y|.1f}} |
+| Δ surplus, steepener | {{phase6.overlay.dS_steepener_C|+.2f}} | {{phase6.overlay.dS_steepener_C_swaps|+.2f}} |
+| Δ surplus, −100bp | {{phase6.overlay.dS_parallel_down_100_C|+.2f}} | {{phase6.overlay.dS_parallel_down_100_C_swaps|+.2f}} |
+
+- With all policy rows on, the overlay replaces zero-spread Treasuries with receivers and adds {{phase6.overlay.income_change|+.3f}} a year. The −100bp result stays at the {{inputs.scenario_max_loss|.2f}} limit; tighter limits are almost free (see the table above).
+- Not modeled: derivative counterparty RBC, collateral, and margin liquidity.
+
+**Prepayment sensitivity** (default rate-dependent CPR vs constant CPR, same holdings):
+
+| | Surplus DV01 ($k/bp), rate-dep. / constant | Δ surplus −100bp, rate-dep. / constant |
+|---|---|---|
+| A | {{phase6.prepay_sensitivity.A_surplus_dv01_k_rate_dependent|+.2f}} / {{phase6.prepay_sensitivity.A_surplus_dv01_k_constant_cpr|+.2f}} | {{phase6.prepay_sensitivity.A_dS_down_100_rate_dependent|+.3f}} / {{phase6.prepay_sensitivity.A_dS_down_100_constant_cpr|+.3f}} |
+| B | {{phase6.prepay_sensitivity.B_surplus_dv01_k_rate_dependent|+.2f}} / {{phase6.prepay_sensitivity.B_surplus_dv01_k_constant_cpr|+.2f}} | {{phase6.prepay_sensitivity.B_dS_down_100_rate_dependent|+.3f}} / {{phase6.prepay_sensitivity.B_dS_down_100_constant_cpr|+.3f}} |
+| C | {{phase6.prepay_sensitivity.C_surplus_dv01_k_rate_dependent|+.2f}} / {{phase6.prepay_sensitivity.C_surplus_dv01_k_constant_cpr|+.2f}} | {{phase6.prepay_sensitivity.C_dS_down_100_rate_dependent|+.3f}} / {{phase6.prepay_sensitivity.C_dS_down_100_constant_cpr|+.3f}} |
+
+## Charts
+
+All charts are in `outputs/figures/`, and every chart is illustrative and uses synthetic data.
+
+| Chart | Files |
+|---|---|
+| Cash flows, annual gap, cumulative funding (Portfolio A) | `a1`–`a3` |
+| Asset vs liability KRD, net mismatch vs tolerance, bucket × tenor heatmap (Portfolio A) | `b1`–`b3` |
+| Efficient frontier, KRD along the frontier, before vs after optimization (KRD, funding, capital) | `c1`–`c5` |
+| Three-portfolio allocation, stress surplus, net KRD | `d1`–`d3` |
+| Robustness: fixed C vs re-optimized income, position / issuer-cap frequency | `e1`–`e2` |
+| MBS negative convexity, spread DV01, downgrade capital, all stress scenarios, swap overlay KRD | `f1`–`f5` |
+| Scenario constraints before vs after, cost of tightening the −100bp limit | `g1`–`g2` |
+
+![Efficient frontier](outputs/figures/c1_frontier_income_vs_capital.png)
+![Net KRD before vs after](outputs/figures/c3_net_krd_before_after.png)
+![Stress](outputs/figures/d2_stress_surplus.png)
+
+## Reproduce
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python scripts/run_all.py    # every table, chart, metrics.json, and this README
+.venv/bin/python -m pytest -q          # unit tests, including README / IC numbers vs metrics.json
+```
+
+The random seed is {{inputs.robustness.seed}} everywhere. All assumptions live in `config/`.
+
+## Limitations
+
+- Market data, spreads, PDs, recoveries, CPRs and the liability block are synthetic.
+- Liability cash flows do not respond to rates (no dynamic lapse), which understates rate risk. The Agency MBS prepayment S-curve is illustrative, not fitted to data.
+- **The liability block is closed and terminates at year {{phase2.liability_truncation.horizon_years}}.**
+  - The same benefit shape run to year {{phase2.liability_truncation.extended_horizon}} (flat curve beyond 30Y) would have {{phase2.liability_truncation.pv_share_beyond_horizon|.1%}} of its PV after year {{phase2.liability_truncation.horizon_years}}.
+  - The reserve V_t only runs to year {{phase2.liability_truncation.horizon_years}}, so surrenders in the last ten years are {{phase2.liability_truncation.late_surrender_ratio|.0%}} of what an open-ended block would pay.
+- The swap overlay result depends on a zero swap spread, no collateral or margin, and a carry of {{phase6.overlay.carry_bp|+.0f}}bp a year.
+- Annual time steps; credit losses use a bond-level PD; designations for structured bonds are illustrative.
+- C-1 charge = value × factor (book-value proxy under stress). There is no bond size factor, tax, covariance or RBC ratio. Derivatives carry no modeled capital.
+- The LP is linear and lands on corner solutions; see the robustness simulation.
+
+## Backlog
+
+- Real U.S. Treasury curve loader (dated par curve, bootstrapped to spot)
+- Simple RBC covariance illustration (clearly labeled, illustrative non-C-1 inputs)
+- Dynamic lapse: surrenders rise when rates rise (liability cash flows are currently fixed under rate shocks)
+
+## Sources
+
+- **C-1 bond factors (current, 20 designations):** 1.A, 2.B and 3.A checked against the Proposal 2026-12-IRE LR002 form (Column 1); the other 17 from Mayer Brown (July 2026, “Current” column), consistent with the 2021 Moody's Analytics base factors. Not yet checked line by line against the full LR002 instructions.
+- **CLO factors:** all 20 designations and the {{inputs.factors.residual|.0%}} residual checked against the adopted Proposal 2026-12-IRE LR002 form. Proposal 2026-12-IRE MOD was adopted by the RBC Investment Risk and Evaluation (E) Working Group (6/23/2026) and the Capital Adequacy (E) Task Force (6/30/2026).
+- **References:** Mayer Brown (July 2026), "The NAIC RBC Investment Risk and Analysis (E) Working Group Has Made Its Decision on New Life RBC Factors for CLOs"; Sidley, "NAIC Adopts New RBC Charges for Collateral Loans and CLOs" (July 2026).
+- The thin-tranche line (7.2) is ambiguous between an add-on and a replacement factor; this model uses the add-on reading (see [docs/assumptions.md](docs/assumptions.md)). <!-- static -->
+
+Further documents: [methodology](docs/methodology.md) · [assumptions](docs/assumptions.md) · [investment committee summary](docs/investment_committee_summary.md)

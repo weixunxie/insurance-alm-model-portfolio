@@ -1,0 +1,14 @@
+# Generic spread and PD levels by NAIC designation, used ONLY to size the effect of a downgrade.
+# SYNTHETIC ASSUMPTIONS (illustrative, monotone in designation), not market data.
+# On a downgrade d -> d':
+#   capital factor -> factor(d')            (CLO table for CLO tranches under the 2026 regime)
+#   PD             -> PD_i * pd(d') / pd(d) (keeps each bond's own PD level, scales by the generic ratio)
+#   spread         -> spread_i + spread(d') - spread(d)   (mark-to-market widening)
+# Exempt from downgrades: TSY (US government) and AGENCY_MBS (GSE / GNMA).
+downgrade_exempt_buckets: [TSY, AGENCY_MBS]
+notch_order: [1.A, 1.B, 1.C, 1.D, 1.E, 1.F, 1.G, 2.A, 2.B, 2.C, 3.A, 3.B, 3.C, 4.A, 4.B, 4.C, 5.A, 5.B, 5.C, "6"]
+spread_bp: {1.A: 45, 1.B: 50, 1.C: 55, 1.D: 65, 1.E: 70, 1.F: 90, 1.G: 110, 2.A: 120, 2.B: 145, 2.C: 180,
+            3.A: 220, 3.B: 260, 3.C: 310, 4.A: 340, 4.B: 400, 4.C: 480, 5.A: 650, 5.B: 850, 5.C: 1100, "6": 1500}
+pd: {1.A: 0.0001, 1.B: 0.0002, 1.C: 0.0002, 1.D: 0.0002, 1.E: 0.0004, 1.F: 0.0005, 1.G: 0.0007, 2.A: 0.0012,
+     2.B: 0.0018, 2.C: 0.0028, 3.A: 0.0060, 3.B: 0.0090, 3.C: 0.0130, 4.A: 0.0200, 4.B: 0.0350, 4.C: 0.0500,
+     5.A: 0.0900, 5.B: 0.1500, 5.C: 0.2500, "6": 0.4000}

@@ -1,0 +1,9 @@
+# Robustness simulation for the LP corner solution. SYNTHETIC ASSUMPTIONS.
+# Each draw multiplies every illustrative spread by N(1, spread_sd) (floored at 0) and every PD by a
+# mean-one lognormal exp(pd_sigma * Z - pd_sigma^2 / 2), then re-optimizes Portfolio C at the base budget K.
+# SIMPLIFICATION: prices, KRDs and expected cash flows are held at base values; only the objective
+# coefficients (s - PD * LGD) are perturbed.
+n_draws: 500
+seed: 42
+spread_sd: 0.10
+pd_sigma: 0.25

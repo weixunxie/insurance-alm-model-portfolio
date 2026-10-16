@@ -1,0 +1,11 @@
+# Illustrative sequential-pay deal (one deal, annual periods). SYNTHETIC ASSUMPTION; NOT a full deal model.
+collateral: 100.0            # USD millions
+collateral_coupon: 0.075
+repay_rate: 0.15             # share of performing balance repaid each year (rest at maturity)
+recovery: 0.60
+maturity: 7
+tranches:                    # senior -> junior; last is equity / residual
+  - {name: Senior, size: 70.0, coupon: 0.055}
+  - {name: Mezz,   size: 20.0, coupon: 0.080}
+  - {name: Equity, size: 10.0, coupon: 0.0}
+cdr_scenarios: [0.00, 0.02, 0.05, 0.10, 0.20]

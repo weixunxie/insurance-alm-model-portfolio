@@ -1,0 +1,28 @@
+# REGULATORY RULE (with source): Life RBC factors for CLO / CBO / CDO tranches, pre-tax, effective with 12/31/2026 RBC.
+# CLO factors: all 20 designations and the 45% residual checked against the adopted Proposal 2026-12-IRE LR002 form.
+# (Proposal 2026-12-IRE MOD adopted by the RBC IRE WG 6/23/2026 and the Capital Adequacy (E) Task Force 6/30/2026.)
+# Background: Mayer Brown (July 2026) and Sidley, "NAIC Adopts New RBC Charges for Collateral Loans and CLOs" (July 2026).
+# Thin-tranche treatment is NOT in this table: see config/clo_thin_tranche.yaml (separate surcharge parameter).
+# Residual / equity tranches: 45%.
+designation,factor,source
+1.A,0.00040,Proposal 2026-12-IRE MOD LR002 form
+1.B,0.00050,Proposal 2026-12-IRE MOD LR002 form
+1.C,0.00050,Proposal 2026-12-IRE MOD LR002 form
+1.D,0.00050,Proposal 2026-12-IRE MOD LR002 form
+1.E,0.00170,Proposal 2026-12-IRE MOD LR002 form
+1.F,0.00170,Proposal 2026-12-IRE MOD LR002 form
+1.G,0.00970,Proposal 2026-12-IRE MOD LR002 form
+2.A,0.02180,Proposal 2026-12-IRE MOD LR002 form
+2.B,0.03240,Proposal 2026-12-IRE MOD LR002 form
+2.C,0.03280,Proposal 2026-12-IRE MOD LR002 form
+3.A,0.15140,Proposal 2026-12-IRE MOD LR002 form
+3.B,0.25150,Proposal 2026-12-IRE MOD LR002 form
+3.C,0.27990,Proposal 2026-12-IRE MOD LR002 form
+4.A,0.31300,Proposal 2026-12-IRE MOD LR002 form
+4.B,0.42310,Proposal 2026-12-IRE MOD LR002 form
+4.C,0.56880,Proposal 2026-12-IRE MOD LR002 form
+5.A,0.57840,Proposal 2026-12-IRE MOD LR002 form
+5.B,0.66340,Proposal 2026-12-IRE MOD LR002 form
+5.C,0.85120,Proposal 2026-12-IRE MOD LR002 form
+6,0.92560,Proposal 2026-12-IRE MOD LR002 form
+RESIDUAL,0.45000,Proposal 2026-12-IRE MOD LR002 form (residual / equity tranches)

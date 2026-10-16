@@ -1,0 +1,52 @@
+# Rule-based model portfolios: market value weights in USD millions (sum = 100).
+# SYNTHETIC ASSUMPTION: hand-set illustrative weights, not optimized.
+A_conservative_ig:
+  description: "Mostly Treasuries and IG corporates, small high-quality structured, no HY"
+  holdings:
+    UST_5Y: 5
+    UST_10Y: 8
+    UST_20Y: 5
+    UST_30Y: 7
+    STRIPS_30Y: 5
+    IG_AAA_10Y: 5
+    IG_AA+_5Y: 5
+    IG_AA-_20Y: 5
+    IG_A+_3Y: 5
+    IG_A_10Y: 5
+    IG_A-_30Y: 5
+    IG_BBB+_5Y: 4
+    IG_BBB_10Y: 4
+    IG_BBB_20Y: 4
+    IG_BBB-_30Y: 3
+    FNMA_30Y: 5
+    GNMA_30Y: 5
+    CMBS_SR: 4
+    ABS_AUTO: 3
+    ABS_CARD: 3
+    CLO_AAA: 5
+
+B_yield_seeking:
+  description: "Max HY and non-agency structured within policy bucket limits; long BBB-heavy IG; ignores the capital budget and KRD limits"
+  holdings:
+    HY_BB+_5Y: 2
+    HY_BB_7Y: 2
+    HY_B+_5Y: 2
+    HY_B_10Y: 2
+    CLO_BB: 2          # NAIC 3.B, so it counts toward the HY (NAIC 3 or below) limit: 8 + 2 = 10
+    CLO_BBB: 4
+    CLO_A: 4
+    CMBS_MEZZ: 5
+    CMBS_SR: 5
+    RMBS_SR: 5
+    ABS_AUTO: 5
+    FNMA_30Y: 10
+    FHLMC_30Y: 10
+    IG_BBB-_30Y: 5
+    IG_BBB_20Y: 5
+    IG_BBB_10Y: 5
+    IG_BBB+_5Y: 5
+    IG_A-_30Y: 5
+    IG_A_10Y: 5
+    IG_AA-_20Y: 5
+    STRIPS_30Y: 5
+    UST_10Y: 2

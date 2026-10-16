@@ -1,0 +1,12 @@
+# Receive-fixed interest rate swap overlay. SYNTHETIC ASSUMPTIONS and SIMPLIFICATIONS.
+# - Swap curve = Treasury spot curve (swap spread 0). Each swap is struck at the par rate of the base curve,
+#   so its value at t0 is 0 and it uses none of the $100M asset budget.
+# - Receive-fixed = long a par fixed bond, short a floater (annual reset, first fixing at the base 1Y rate).
+# - Modeled C-1 bond charge: 0. NOT modeled: derivative counterparty / collateral RBC, initial and variation
+#   margin, liquidity calls on collateral, hedge accounting.
+# - Carry: under the forward curve the expected net settlement has zero PV, so expected carry is 0;
+#   carry_bp_per_year is an explicit running cost per USD of notional (bid-ask amortization, collateral
+#   funding). It enters the LP objective. Expected swap settlements are excluded from the funding test.
+tenors: [10, 20, 30]
+carry_bp_per_year: -1.0
+max_total_notional: 50.0      # USD millions

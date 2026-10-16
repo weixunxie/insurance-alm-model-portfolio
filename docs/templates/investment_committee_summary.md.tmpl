@@ -1,0 +1,61 @@
+<!-- GENERATED FILE: edit docs/templates/investment_committee_summary.md.tmpl, then run scripts/run_all.py. -->
+# Investment Committee Summary: Fixed Income Model Portfolio
+
+*Hypothetical U.S. life insurer. Illustrative, synthetic data. Educational model, not a statutory or RBC result. Figures come from `outputs/metrics.json`; amounts are in USD millions.*
+
+**Recommendation: adopt Portfolio C (Optimized ALM) as the model portfolio for the ${{inputs.total_assets|.0f}}M book backing ${{inputs.liability_pv_target|.0f}}M of liabilities (PV), with its scenario loss limits and downgrade buffer as standing policy, and a decision on the swap overlay.**
+
+## Why C
+
+| | A Conservative IG | B Yield seeking | **C Optimized ALM** |
+|---|---|---|---|
+| Net spread income (after expected loss), per year | {{phase5.portfolios.A.net_spread_income|.3f}} | {{phase5.portfolios.B.net_spread_income|.3f}} | **{{phase5.portfolios.C.net_spread_income|.3f}}** |
+| Expected credit loss, per year | {{phase5.portfolios.A.expected_credit_loss|.3f}} | {{phase5.portfolios.B.expected_credit_loss|.3f}} | {{phase5.portfolios.C.expected_credit_loss|.3f}} |
+| Modeled C-1 charge vs ${{inputs.capital_budget|.2f}}M budget | {{phase5.portfolios.A.capital_charge|.3f}} ({{phase5.portfolios.A.budget_utilization|.0%}}) | **{{phase5.portfolios.B.capital_charge|.3f}} ({{phase5.portfolios.B.budget_utilization|.0%}})** | {{phase5.portfolios.C.capital_charge|.3f}} ({{phase5.portfolios.C.budget_utilization|.0%}}) |
+| Surplus DV01 ($k per bp; limit ± {{inputs.rate_risk.surplus_dv01_max|.0f}}) | {{phase5.portfolios.A.surplus_dv01_k|+.1f}} | **{{phase5.portfolios.B.surplus_dv01_k|+.1f}}** | {{phase5.portfolios.C.surplus_dv01_k|+.1f}} |
+| Key rate tenors outside tolerance | **{{phase5.portfolios.A.krd_tenors_breaching|.0f}}** | **{{phase5.portfolios.B.krd_tenors_breaching|.0f}}** | {{phase5.portfolios.C.krd_tenors_breaching|.0f}} |
+| Rate limits met (surplus DV01 and every KRD tenor) | **{{phase5.portfolios.A.rate_limits_ok}}** | **{{phase5.portfolios.B.rate_limits_ok}}** | {{phase5.portfolios.C.rate_limits_ok}} |
+| Bucket and issuer limits met | {{phase5.portfolios.A.bucket_limits_ok}} | {{phase5.portfolios.B.bucket_limits_ok}} | {{phase5.portfolios.C.bucket_limits_ok}} |
+
+- **C earns {{report.C_over_A_income|.1f}}x A's spread income** ({{report.C_minus_A_income|+.3f}} a year) and is the only portfolio that meets every policy limit at once.
+- **B earns only {{report.B_minus_C_income_k|.0f}}k a year more than C** (USD), but needs {{report.B_capital_over_budget|.0%}} more capital than the budget and breaks the rate-risk limits. Of B's extra {{report.B_minus_C_gross_spread_k|.0f}}k of gross spread over C, {{report.B_minus_C_el_k|.0f}}k is lost to higher expected credit losses.
+- **The shadow price of the capital budget is {{phase4.shadow_price_capital|.3f}}**: an extra dollar of budget adds about that much net spread a year (counting both the capital row and the downgrade buffer). Income rises from {{phase4.frontier_income_at_min_budget|.3f}} at K = ${{inputs.frontier.min|.2f}}M to {{phase4.frontier_income_at_max_budget|.3f}} once capital used reaches ${{phase4.frontier_capital_at_max_budget|.2f}}M. It stays flat after that, because the HY, CLO and issuer limits bind.
+
+## What C gives up
+
+- **C is still short duration, but within a loss limit.** Spread-bearing assets here are shorter than the liabilities, and long Treasuries carry zero spread. So the optimizer runs a short position (surplus DV01 {{phase5.portfolios.C.surplus_dv01_k|+.1f}}k per bp) up to the −100bp scenario limit of {{inputs.scenario_max_loss|.2f}}.
+  - A 100bp fall changes C's surplus by **{{phase5.stress.C_parallel_down_100_dS|+.2f}}**, against {{phase5.stress.A_parallel_down_100_dS|+.2f}} for A. A 100bp rise changes it by {{phase5.stress.C_parallel_up_100_dS|+.2f}}.
+  - Holding that limit costs {{phase6.constraints.scenario_cost|.4f}} a year of income, versus an unconstrained C at {{phase6.constraints.dS_parallel_down_100_C_before|+.2f}}.
+- **C has more credit and spread risk.** NAIC 3+ spreads +200bp change C's surplus by {{phase5.stress.C_hy_spread_up_200_dS|+.2f}}, against {{phase5.stress.A_hy_spread_up_200_dS|+.2f}} for A and {{phase5.stress.B_hy_spread_up_200_dS|+.2f}} for B. C holds {{phase5.portfolios.C.hy|.1f}} of NAIC 3+ assets (including CLO BB), {{phase5.portfolios.C.clo|.1f}} of CLOs and {{phase5.portfolios.C.structured_ex_agency|.1f}} of non-agency structured.
+- **Capital is sized to a downgrade, not just to today.** Budget utilization is {{phase5.portfolios.C.budget_utilization|.0%}}. The binding row is the downgrade buffer: after a one-notch downgrade of every BBB-family holding, capital is {{phase6.stress.C_bbb_downgrade_one_notch_capital_charge|.3f}}, against a limit of {{report.downgrade_buffer_limit|.2f}}. The buffer costs {{phase6.constraints.buffer_cost|.4f}} a year.
+- **The same downgrade breaks the HY limit.** It lifts NAIC 3+ holdings to {{phase6.stress.C_bbb_downgrade_one_notch_hy_after|.1f}} (limit {{inputs.limits.hy_max|.0f}}), because BBB− becomes 3.A. The buffer controls capital, not the HY count.
+- **Negative convexity.** C holds {{phase5.portfolios.C.agency_mbs|.1f}} of Agency MBS, with effective convexity of about {{phase6.mbs.FNMA_30Y_rate_dependent_effective_conv|.0f}} (FNMA). A ±100bp move changes surplus by {{phase4.portfolio_C.dS_full_parallel_up_100|+.2f}} / {{phase4.portfolio_C.dS_full_parallel_down_100|+.2f}}, against {{phase4.portfolio_C.dS_krd_parallel_up_100|+.2f}} / {{phase4.portfolio_C.dS_krd_parallel_down_100|+.2f}} on a linear estimate.
+- **Combined adverse stress** (−100bp, wider spreads, BBB downgrades): C {{phase6.stress.C_combined_adverse_dS|+.2f}} (it was {{phase6.constraints.dS_combined_adverse_C_before|+.2f}} before the scenario limits), B {{phase6.stress.B_combined_adverse_dS|+.2f}}, A {{phase6.stress.A_combined_adverse_dS|+.2f}}.
+- **C has the liquidity A lacks.** With surrenders +{{inputs.scenarios.lapse_increase|.0%}} in years 1–5, C's minimum funding balance stays at {{phase6.stress.C_surrenders_up_50pct_y1_5_min_funding_y1_to_check|+.2f}}, while A's falls to {{phase6.stress.A_surrenders_up_50pct_y1_5_min_funding_y1_to_check|+.2f}}.
+
+## How robust is C
+
+{{phase5.robustness.n_optimal}} of {{phase5.robustness.n_draws}} perturbed re-optimizations were feasible (spreads × N(1, {{inputs.robustness.spread_sd|.2f}}), PDs × lognormal, σ = {{inputs.robustness.pd_sigma|.2f}}).
+
+| Mean net spread income across draws | |
+|---|---|
+| Base C held fixed | {{phase5.robustness.income_fixed_C_mean|.3f}} (5th–95th percentile: {{phase5.robustness.income_fixed_C_p5|.3f}}–{{phase5.robustness.income_fixed_C_p95|.3f}}) |
+| Re-optimized on each draw (in-sample) | {{phase5.robustness.income_reopt_in_sample_mean|.3f}} |
+| Re-optimized, evaluated on a fresh draw (out-of-sample) | {{phase5.robustness.income_reopt_out_of_sample_mean|.3f}} |
+
+- The in-sample gain ({{phase5.robustness.optimizers_curse_gap|+.4f}}) is the **optimizer's curse**. Out-of-sample, chasing each draw's noise is worse than holding C ({{phase5.robustness.oos_minus_fixed_C|+.4f}}).
+- Bucket weights are stable: HY runs from {{phase5.robustness.bucket_HY_p5|.1f}} to {{phase5.robustness.bucket_HY_p95|.1f}}, and CLO, CMBS and RMBS sit at their limits. Individual names are not stable: the Agency MBS issuer and the second HY name change from draw to draw.
+- Treat the bucket mix as the recommendation and name selection as an execution decision.
+
+## Swap overlay result
+
+- Receive-fixed swaps ({{phase6.overlay.notional_20y|.1f}} at 20Y and {{phase6.overlay.notional_30y|.1f}} at 30Y notional) replace {{phase6.overlay.treasury_C|.1f}} of zero-spread Treasuries / STRIPS and add {{phase6.overlay.income_change|+.3f}} a year.
+- The steepener result improves from {{phase6.overlay.dS_steepener_C|+.2f}} to {{phase6.overlay.dS_steepener_C_swaps|+.2f}}.
+- **The overlay makes −100bp protection nearly free.** Tightening the −100bp loss limit from {{report.sweep.loosest_limit|.2f}} to {{report.sweep.tightest_limit|.2f}} costs {{headline.cost_to_zero_down_100_loss_no_overlay|.4f}} a year with cash bonds only, but {{headline.cost_to_zero_down_100_loss_with_overlay|.4f}} with the overlay.
+- Not modeled: counterparty RBC, collateral, and margin.
+
+## Asks for the committee
+
+1. Approve the Portfolio C bucket mix as the target allocation.
+2. Adopt as policy the scenario surplus loss limit ({{inputs.scenario_max_loss|.2f}} per curve scenario) and the downgrade buffer ({{inputs.downgrade_buffer_multiple|.2f}} × K). Add a BBB− cap if the HY-limit breach on downgrade is not acceptable.
+3. Approve the swap overlay once the collateral and counterparty framework is in place, and then tighten the −100bp loss limit, which the overlay makes almost costless.

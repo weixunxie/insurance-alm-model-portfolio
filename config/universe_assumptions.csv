@@ -1,0 +1,43 @@
+# Synthetic investment universe. SYNTHETIC ASSUMPTIONS: issuers are fictional; spreads, PDs, recoveries,
+# CPRs, WALs and tranche thicknesses are ILLUSTRATIVE (plausible ordering only), NOT market observations.
+# NAIC designations for RMBS / CMBS / CLO are illustrative; real designations for these come from NAIC SSG
+# modeling or filing rules and do NOT automatically follow the credit rating.
+# Columns: coupon blank = solved so price ~ 100 (rounded to 1/8 pct); float_margin blank = spread;
+# amort_term blank = maturity; maturity of a floater = principal date at expected WAL (years);
+# pd = annual default rate on outstanding balance (bond-level CDR for structured); spread = Z-spread
+# (discount margin for floaters) over the Treasury spot curve; EXEMPT = U.S. government full faith and credit.
+id,issuer,bucket,rating,naic_designation,cf_model,coupon,float_margin,maturity,amort_term,spread,pd,recovery,cpr,liquidity_tier,tranche_thickness,clo_collateral,notes
+UST_2Y,US_TREASURY,TSY,AAA,EXEMPT,bullet,,,2,,0.0,0.0,1.0,0.0,1,,,On-the-run style note
+UST_5Y,US_TREASURY,TSY,AAA,EXEMPT,bullet,,,5,,0.0,0.0,1.0,0.0,1,,,
+UST_10Y,US_TREASURY,TSY,AAA,EXEMPT,bullet,,,10,,0.0,0.0,1.0,0.0,1,,,
+UST_20Y,US_TREASURY,TSY,AAA,EXEMPT,bullet,,,20,,0.0,0.0,1.0,0.0,1,,,
+UST_30Y,US_TREASURY,TSY,AAA,EXEMPT,bullet,,,30,,0.0,0.0,1.0,0.0,1,,,
+STRIPS_20Y,US_TREASURY,TSY,AAA,EXEMPT,zero,0.0,,20,,0.0,0.0,1.0,0.0,1,,,Principal STRIPS
+STRIPS_30Y,US_TREASURY,TSY,AAA,EXEMPT,zero,0.0,,30,,0.0,0.0,1.0,0.0,1,,,Principal STRIPS
+IG_AAA_10Y,ISS_IG01,IG,AAA,1.A,bullet,,,10,,0.0045,0.0001,0.40,0.0,2,,,
+IG_AA+_5Y,ISS_IG02,IG,AA+,1.B,bullet,,,5,,0.0050,0.0002,0.40,0.0,2,,,
+IG_AA-_20Y,ISS_IG03,IG,AA-,1.D,bullet,,,20,,0.0070,0.0002,0.40,0.0,2,,,
+IG_A+_3Y,ISS_IG04,IG,A+,1.E,bullet,,,3,,0.0070,0.0004,0.40,0.0,2,,,
+IG_A_10Y,ISS_IG05,IG,A,1.F,bullet,,,10,,0.0090,0.0005,0.40,0.0,2,,,
+IG_A-_30Y,ISS_IG06,IG,A-,1.G,bullet,,,30,,0.0110,0.0007,0.40,0.0,2,,,
+IG_BBB+_5Y,ISS_IG07,IG,BBB+,2.A,bullet,,,5,,0.0115,0.0012,0.40,0.0,2,,,
+IG_BBB_10Y,ISS_IG08,IG,BBB,2.B,bullet,,,10,,0.0140,0.0018,0.40,0.0,2,,,
+IG_BBB_20Y,ISS_IG09,IG,BBB,2.B,bullet,,,20,,0.0160,0.0018,0.40,0.0,2,,,
+IG_BBB-_30Y,ISS_IG10,IG,BBB-,2.C,bullet,,,30,,0.0185,0.0028,0.40,0.0,2,,,
+HY_BB+_5Y,ISS_HY01,HY,BB+,3.A,bullet,,,5,,0.0220,0.0060,0.40,0.0,3,,,
+HY_BB_7Y,ISS_HY02,HY,BB,3.B,bullet,,,7,,0.0260,0.0090,0.40,0.0,3,,,
+HY_B+_5Y,ISS_HY03,HY,B+,4.A,bullet,,,5,,0.0330,0.0200,0.40,0.0,3,,,
+HY_B_10Y,ISS_HY04,HY,B,4.B,bullet,,,10,,0.0400,0.0350,0.40,0.0,3,,,
+FNMA_30Y,FNMA,AGENCY_MBS,AAA,1.A,amortizing,,,30,,0.0060,0.0,1.0,0.08,1,,,Pass-through pool; FNMA/FHLMC treated as 1.A (assumption)
+FHLMC_30Y,FHLMC,AGENCY_MBS,AAA,1.A,amortizing,,,30,,0.0065,0.0,1.0,0.10,1,,,Pass-through pool; FNMA/FHLMC treated as 1.A (assumption)
+GNMA_30Y,GNMA,AGENCY_MBS,AAA,EXEMPT,amortizing,,,30,,0.0055,0.0,1.0,0.07,1,,,GNMA carries full faith and credit
+RMBS_SR,ISS_RM01,RMBS,AAA,1.A,amortizing,,,30,,0.0150,0.0020,0.60,0.10,3,,,Non-agency senior; illustrative designation
+CMBS_SR,ISS_CM01,CMBS,AAA,1.A,amortizing,,,10,30,0.0110,0.0003,0.60,0.0,2,,,Senior; 30Y amortization with 10Y balloon; full lockout
+CMBS_MEZZ,ISS_CM02,CMBS,A-,1.G,amortizing,,,10,30,0.0230,0.0020,0.30,0.0,3,,,Mezzanine; illustrative designation
+ABS_AUTO,ISS_AB01,ABS,AAA,1.A,amortizing,,,5,,0.0055,0.0001,0.60,0.15,2,,,Prime auto loans
+ABS_CARD,ISS_AB02,ABS,AAA,1.A,bullet,,,5,,0.0045,0.0001,0.60,0.0,2,,,Credit card; revolving then bullet at year 5
+CLO_AAA,ISS_CL01,CLO,AAA,1.A,floater,,,5,,0.0130,0.0001,0.60,0.0,2,0.62,BSL,
+CLO_AA,ISS_CL02,CLO,AA,1.C,floater,,,6,,0.0175,0.0003,0.50,0.0,3,0.11,BSL,
+CLO_A,ISS_CL03,CLO,A,1.F,floater,,,6,,0.0215,0.0006,0.40,0.0,3,0.06,BSL,
+CLO_BBB,ISS_CL04,CLO,BBB,2.B,floater,,,7,,0.0320,0.0020,0.30,0.0,3,0.06,BSL,
+CLO_BB,ISS_CL05,CLO,BB,3.B,floater,,,7,,0.0600,0.0080,0.20,0.0,3,0.05,BSL,

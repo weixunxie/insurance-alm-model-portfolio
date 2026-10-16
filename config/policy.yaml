@@ -1,0 +1,48 @@
+# Investment policy and ALM rules. SYNTHETIC ASSUMPTIONS (configurable).
+# Units: USD millions; DV01 limits in USD thousands per bp.
+
+total_assets: 100.0
+
+capital:
+  budget: 1.20                 # modeled C-1 bond capital budget K (USD millions)
+  frontier: {min: 0.40, max: 3.00, step: 0.10}
+  clo_regime: new_2026         # new_2026 = 12/31/2026 CLO factors; old_bond = corporate bond factors for CLOs
+
+limits:                        # USD millions of market value (= % of the $100M portfolio)
+  hy_max: 10.0                 # NAIC 3 or below
+  structured_max: 30.0         # non-agency RMBS, CMBS, ABS, CLO (EXCLUDES Agency MBS)
+  agency_mbs_max: 20.0         # negative convexity / prepayment risk
+  clo_max: 10.0
+  single_issuer_max: 5.0
+  single_issuer_exempt: [US_TREASURY, GNMA, FNMA, FHLMC]
+  liquidity_min: 10.0          # Treasuries + Agency MBS
+structured_buckets: [RMBS, CMBS, ABS, CLO]
+
+cash_flow_funding:
+  beginning_cash: 0.0
+  borrow_spread: 0.0100        # negative balances funded at 1Y forward + 100bp (proxy for forced sales)
+  check_years: 10              # cumulative funding balance must be >= 0 for years 1..check_years
+
+rate_risk:                     # two-level rule
+  surplus_dv01_max: 5.0        # |asset DV01 - liability DV01| <= $5k per bp
+  krd_floor: 5.0               # per key tenor: |net key rate DV01| <= max(krd_floor,
+  krd_pct_of_liability: 0.20   #                 krd_pct_of_liability * liability key rate DV01 at that tenor)
+
+solver:
+  name: HIGHS
+  soft_penalty: 1000.0         # penalty per unit of slack when re-solving an infeasible problem
+  binding_tol: 1.0e-6
+
+scenario_constraints:          # surplus loss limits by full repricing (lets the LP see convexity)
+  enabled: true
+  max_loss: 0.50               # USD millions per scenario (scalar, or {scenario: value})
+  scenarios: [parallel_up_100, parallel_down_100, steepener, flattener]
+  sweep_parallel_down: [0.50, 0.40, 0.30, 0.20, 0.10, 0.00]   # -100bp loss limits for the cost sweep
+
+downgrade_buffer:              # capital after a one-notch BBB-family downgrade <= multiple x K
+  enabled: true
+  multiple: 1.10
+  rule: {bbb_family: one_notch}
+  hy_limit_after_downgrade:    # optional: NAIC 3+ holdings after the same downgrade <= hy_max + allowance
+    enabled: false
+    allowance: 0.0             # USD millions of tolerated breach

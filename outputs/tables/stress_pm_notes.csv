@@ -1,0 +1,5 @@
+scenario,pm_note
+parallel_up_100,"Surplus moves with the sign of surplus DV01. Higher reinvestment rates help the funding balance. If surplus fell, shorten assets or add pay-fixed swaps; if it rose, the book was short duration."
+parallel_down_100,"Short-duration books lose surplus as liability PV rises faster than assets; reinvestment income falls. Extend the long end with STRIPS or add receive-fixed swaps, and watch MBS contraction."
+steepener,Hurts books that are long the long end relative to liabilities (net positive 20Y/30Y key rate DV01). Trim 30Y STRIPS / long corporates toward the 10Y-20Y buckets where liabilities sit.
+hy_spread_up_200,"Mark-to-market loss scales with HY market value times spread duration; liabilities do not move. Review the weakest B names, keep HY under the 10% NAIC 3+ limit after any downgrades."

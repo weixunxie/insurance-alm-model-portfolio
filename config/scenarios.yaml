@@ -1,0 +1,104 @@
+# Scenarios. SYNTHETIC ASSUMPTIONS. Curve shifts in bp to the base spot curve.
+# parallel: same shift at every maturity; twist: linear from short_bp at t_short to long_bp at t_long, flat outside.
+rate_scenarios:
+  parallel_up_100:   {type: parallel, bp: 100}
+  parallel_down_100: {type: parallel, bp: -100}
+  steepener:         {type: twist, short_bp: -50, long_bp: 50, t_short: 1, t_long: 30}
+  flattener:         {type: twist, short_bp: 50, long_bp: -50, t_short: 1, t_long: 30}
+
+# Stress scenarios (Section 10). curve: optional curve shift.
+# spread_shocks: list of {select, bp}; shocks to the same security add up. Mark-to-market only
+# (PDs and expected cash flows unchanged). Selectors:
+#   {naic: hy}        NAIC designation 3.A and below (any bucket, so CLO_BB 3.B is included). Same rule as the HY limit.
+#   {naic: ig}        NAIC 1.A-2.C, excluding EXEMPT
+#   {buckets: [...]}  by bucket (e.g. IG corporates, non-agency structured)
+stress_scenarios:
+  parallel_up_100:
+    curve: {type: parallel, bp: 100}
+    pm_note: >-
+      Surplus moves with the sign of surplus DV01. Higher reinvestment rates help the funding balance.
+      If surplus fell, shorten assets or add pay-fixed swaps; if it rose, the book was short duration.
+  parallel_down_100:
+    curve: {type: parallel, bp: -100}
+    pm_note: >-
+      Short-duration books lose surplus as liability PV rises faster than assets; reinvestment income falls.
+      Extend the long end with STRIPS or add receive-fixed swaps, and watch MBS contraction.
+  steepener:
+    curve: {type: twist, short_bp: -50, long_bp: 50, t_short: 1, t_long: 30}
+    pm_note: >-
+      Hurts books that are long the long end relative to liabilities (net positive 20Y/30Y key rate DV01).
+      Trim 30Y STRIPS / long corporates toward the 10Y-20Y buckets where liabilities sit.
+  hy_spread_up_200:
+    spread_shocks:
+      - {select: {naic: hy}, bp: 200}
+    pm_note: >-
+      Mark-to-market loss scales with HY market value times spread duration; liabilities do not move.
+      Review the weakest B names, keep HY under the 10% NAIC 3+ limit after any downgrades.
+
+# Phase 6 scenarios (Section 10, items 5-13). Same engine and selectors as above, plus:
+#   downgrade: {bbb_family: one_notch | '3.A'} or {notches: n, buckets: [...]}; exempt buckets per credit_migration.yaml
+#   credit: list of {select, pd_mult, recovery_shift}   (default stress: income + expected cash flows; spreads unchanged)
+#   cpr_mult: multiplier on base CPR for every prepaying security (Agency MBS, RMBS, auto ABS)
+#   lapse: {mult, years: [first, last]}
+# IG spread scenario uses the IG corporate BUCKET (structured spreads have their own scenario 7);
+# HY uses the NAIC 3+ rule, matching the HY limit.
+stress_scenarios_phase6:
+  flattener:
+    curve: {type: twist, short_bp: 50, long_bp: -50, t_short: 1, t_long: 30}
+    pm_note: >-
+      Hurts books that are short the long end relative to liabilities. Add 20Y/30Y duration
+      (STRIPS or receive-fixed swaps) funded from the 2Y-5Y bucket.
+  ig_spread_up_50:
+    spread_shocks: [{select: {buckets: [IG]}, bp: 50}]
+    pm_note: >-
+      Mark-to-market only; book yield is unchanged and liabilities do not move. Usually a hold or add
+      decision for a buy-and-hold insurer, unless the move signals downgrades.
+  structured_spread_up:
+    spread_shocks:
+      - {select: {buckets: [RMBS, CMBS, ABS]}, bp: 100}
+      - {select: {buckets: [CLO]}, bp: 150}
+    pm_note: >-
+      Long spread duration of CMBS / CLO mezzanine drives the loss. Check whether CLO tranches stay above
+      the thin-tranche and designation thresholds before adding.
+  bbb_downgrade_one_notch:
+    downgrade: {bbb_family: one_notch}
+    pm_note: >-
+      Every 2.C becomes 3.A, a fallen angel that now counts toward the HY limit. Expect a capital jump; sell
+      or hedge the weakest BBB- names before the downgrade if spreads already price it.
+  fallen_angels_bbb_to_3A:
+    downgrade: {bbb_family: "3.A"}
+    pm_note: >-
+      Severe case: all BBB-family holdings become NAIC 3.A. HY limit breach is likely; the forced-sale
+      decision vs a temporary limit waiver drives realized losses.
+  hy_defaults_x2:
+    credit: [{select: {naic: hy}, pd_mult: 2.0, recovery_shift: -0.10}]
+    pm_note: >-
+      Income and expected cash flows fall; no mark-to-market in this model (spreads held). Reduce B-rated
+      exposure and rely on IG / structured carry.
+  prepay_fast_x1_5:
+    cpr_mult: 1.5
+    pm_note: >-
+      Contraction: MBS cash comes back early and is reinvested at lower forwards. Funding improves but
+      long-end duration falls; extend with STRIPS or receivers.
+  prepay_slow_x0_5:
+    cpr_mult: 0.5
+    pm_note: >-
+      Extension: MBS duration lengthens and early funding falls. Check years 1-10 funding and trim MBS
+      if the balance approaches zero.
+  surrenders_up_50pct_y1_5:
+    lapse: {mult: 1.5, years: [1, 5]}
+    pm_note: >-
+      Surrenders are paid at the reserve value, so PV barely moves, but cash leaves early. Watch the
+      years 1-5 funding balance; keep short Treasuries / ABS as a liquidity buffer.
+  combined_adverse:
+    curve: {type: parallel, bp: -100}
+    spread_shocks:
+      - {select: {buckets: [IG]}, bp: 50}
+      - {select: {naic: hy}, bp: 200}
+    downgrade: {bbb_family: one_notch}
+    pm_note: >-
+      Rates down, spreads wider and downgrades at once: the short-duration position and the credit
+      position lose together. Receive-fixed swaps address the first; cutting BBB- / HY addresses the second.
+
+capital_budget_stress:
+  tighter_capital_25pct: {budget_mult: 0.75}

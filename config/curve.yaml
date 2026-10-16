@@ -1,0 +1,19 @@
+# Base Treasury spot (zero) curve.
+# SYNTHETIC ASSUMPTION: illustrative shape only, NOT market data.
+# Rates are annually compounded spot rates, as decimals.
+valuation_date: "2026-12-31"
+compounding: annual
+interpolation: linear_on_zero_rates   # flat extrapolation before first / after last tenor
+
+spot_curve:
+  tenors: [1, 2, 3, 5, 7, 10, 20, 30]
+  rates:  [0.0400, 0.0390, 0.0385, 0.0390, 0.0405, 0.0425, 0.0460, 0.0455]
+
+# Key rate tenors for KRD (triangular bumps on the zero curve)
+key_tenors: [1, 2, 3, 5, 7, 10, 20, 30]
+
+bumps:
+  dv01: 0.0001        # 1 bp for DV01 / KRD / spread duration
+  effective: 0.0025   # +/- 25 bp for effective duration and convexity
+
+seed: 42

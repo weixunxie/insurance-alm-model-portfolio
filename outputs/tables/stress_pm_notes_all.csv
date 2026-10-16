@@ -1,0 +1,15 @@
+scenario,pm_note
+parallel_up_100,"Surplus moves with the sign of surplus DV01. Higher reinvestment rates help the funding balance. If surplus fell, shorten assets or add pay-fixed swaps; if it rose, the book was short duration."
+parallel_down_100,"Short-duration books lose surplus as liability PV rises faster than assets; reinvestment income falls. Extend the long end with STRIPS or add receive-fixed swaps, and watch MBS contraction."
+steepener,Hurts books that are long the long end relative to liabilities (net positive 20Y/30Y key rate DV01). Trim 30Y STRIPS / long corporates toward the 10Y-20Y buckets where liabilities sit.
+hy_spread_up_200,"Mark-to-market loss scales with HY market value times spread duration; liabilities do not move. Review the weakest B names, keep HY under the 10% NAIC 3+ limit after any downgrades."
+flattener,Hurts books that are short the long end relative to liabilities. Add 20Y/30Y duration (STRIPS or receive-fixed swaps) funded from the 2Y-5Y bucket.
+ig_spread_up_50,"Mark-to-market only; book yield is unchanged and liabilities do not move. Usually a hold or add decision for a buy-and-hold insurer, unless the move signals downgrades."
+structured_spread_up,Long spread duration of CMBS / CLO mezzanine drives the loss. Check whether CLO tranches stay above the thin-tranche and designation thresholds before adding.
+bbb_downgrade_one_notch,"Every 2.C becomes 3.A, a fallen angel that now counts toward the HY limit. Expect a capital jump; sell or hedge the weakest BBB- names before the downgrade if spreads already price it."
+fallen_angels_bbb_to_3A,Severe case: all BBB-family holdings become NAIC 3.A. HY limit breach is likely; the forced-sale decision vs a temporary limit waiver drives realized losses.
+hy_defaults_x2,Income and expected cash flows fall; no mark-to-market in this model (spreads held). Reduce B-rated exposure and rely on IG / structured carry.
+prepay_fast_x1_5,Contraction: MBS cash comes back early and is reinvested at lower forwards. Funding improves but long-end duration falls; extend with STRIPS or receivers.
+prepay_slow_x0_5,Extension: MBS duration lengthens and early funding falls. Check years 1-10 funding and trim MBS if the balance approaches zero.
+surrenders_up_50pct_y1_5,"Surrenders are paid at the reserve value, so PV barely moves, but cash leaves early. Watch the years 1-5 funding balance; keep short Treasuries / ABS as a liquidity buffer."
+combined_adverse,"Rates down, spreads wider and downgrades at once: the short-duration position and the credit position lose together. Receive-fixed swaps address the first; cutting BBB- / HY addresses the second."

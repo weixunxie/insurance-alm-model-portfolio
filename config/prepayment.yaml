@@ -1,0 +1,14 @@
+# Rate-dependent prepayment for Agency MBS. SYNTHETIC ASSUMPTION (illustrative S-curve, not a fitted model).
+#   CPR(dy) = clip(CPR_base + a * (logistic(-b * dy) - 0.5), cpr_min, cpr_max)
+#   dy = change in the 10Y spot rate vs the base curve (proxy for the change in mortgage rates);
+#   rates down -> refinancing incentive up -> CPR up (contraction); rates up -> CPR down (extension).
+# Centered so that CPR(0) = CPR_base (base-case cash flows unchanged).
+model: rate_dependent          # rate_dependent | constant
+apply_to_buckets: [AGENCY_MBS]
+a: 0.15                        # max CPR swing is +/- a/2 (7.5 CPR points)
+b: 100.0                       # slope per unit rate change (b * 0.01 = 1 per 100bp)
+# Calibrated (illustratively) so effective convexity lands near -160 to -250, a typical order of magnitude for
+# current-coupon Agency MBS in these units; it is NOT fitted to data.
+rate_tenor: 10
+cpr_min: 0.02
+cpr_max: 0.60
