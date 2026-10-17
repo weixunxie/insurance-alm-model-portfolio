@@ -1,8 +1,8 @@
 {
   "provenance": {
     "generated": "2026-10-17",
-    "commit": "f9acbf5",
-    "dirty": true
+    "commit": "73a399b",
+    "dirty": false
   },
   "inputs": {
     "total_assets": 100.0,
