@@ -76,7 +76,7 @@ All figures are in USD millions unless noted and come from [outputs/metrics.json
 
 **Optimization findings**
 
-- **Shadow price of the capital budget K: 0.107.** K appears in two rows, the C-1 charge ≤ K and the post-downgrade charge ≤ 1.10·K. So dIncome/dK = dual_capital + 1.10 × dual_buffer. At the base budget, one more dollar of K adds about $0.11 a year of net spread. The value is 0.62 at K = $0.40M and 0 once capital used reaches $2.22M, where the frontier tops out at 1.332 and the HY, CLO and issuer limits bind instead.
+- **Shadow price of the capital budget K: 0.107.** K appears in two rows, the C-1 charge ≤ K and the post-downgrade charge ≤ 1.10·K. So dIncome/dK = dual_capital + 1.10 × dual_buffer. At the base budget, one more dollar of K adds about $0.11 a year of net spread. The value is 0.62 at K = $0.40M and 0 once capital used reaches $2.22M, where the frontier tops out at 1.332 and the HY, CLO and issuer limits bind instead. At the base budget the binding capital row is the post-downgrade buffer (1.10 × K), not the base C-1 charge (dual_capital 0.0000, dual_buffer 0.0972).
 - **Why the LP does not swap more BBB into HY.** A $1M BBB → BB+ swap earns 0.55% of spread for 1.63% of capital, but the HY (NAIC 3+) limit is binding with a dual of 0.0082. Priced at all binding duals, the swap's reduced cost is 0.0e+00.
 - **CLO factor regime.**
   - (a) C's holdings repriced on the old bond factors need $1.047M of capital, versus $1.191M under the 2026 CLO factors.
@@ -213,6 +213,20 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
 The random seed is 42 everywhere. All assumptions live in `config/`.
+
+## Dashboard
+
+An interactive Plotly Dash app in `dashboard/` reuses the model code in `src/alm` and the saved results in `outputs/`. The Optimizer page re-solves the LP live for a chosen capital budget, constraint switches and CLO factor regime. The other pages (rate risk, cash flows, capital, stress tests, robustness, methodology) show portfolios A, B and C from the saved holdings and outputs, recomputed at startup with the same code as `scripts/run_all.py` where a table is not saved.
+
+Live demo: `<Railway URL>`
+
+```bash
+.venv/bin/python -m dashboard.app      # local development server, port 8050 (or $PORT)
+```
+
+- Production, the start command in `railway.json`: `gunicorn dashboard.app:server --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120` <!-- static -->
+- Railway installs `requirements.txt` with the Python version in `.python-version`. The healthcheck path `/health` returns 503 until the model cache is built at startup, then 200.
+- After changing `config/`, rerun `scripts/run_all.py` so the saved results the dashboard reads stay in sync.
 
 ## Limitations
 

@@ -27,7 +27,7 @@
   - A 100bp fall changes C's surplus by **-0.50**, against +0.56 for A. A 100bp rise changes it by +0.07.
   - Holding that limit costs 0.0083 a year of income, versus an unconstrained C at -0.73.
 - **C has more credit and spread risk.** NAIC 3+ spreads +200bp change C's surplus by -0.91, against +0.00 for A and -0.94 for B. C holds 10.0 of NAIC 3+ assets (including CLO BB), 10.0 of CLOs and 25.0 of non-agency structured.
-- **Capital is sized to a downgrade, not just to today.** Budget utilization is 99%. The binding row is the downgrade buffer: after a one-notch downgrade of every BBB-family holding, capital is 1.320, against a limit of 1.32. The buffer costs 0.0009 a year.
+- **Capital is sized to a downgrade, not just to today.** Budget utilization is 99%. The binding capital row is the post-downgrade buffer (1.10 × K), not the base C-1 charge: after a one-notch downgrade of every BBB-family holding, capital is 1.320, against a limit of 1.32. The buffer costs 0.0009 a year.
 - **The same downgrade breaks the HY limit.** It lifts NAIC 3+ holdings to 15.0 (limit 10), because BBB− becomes 3.A. The buffer controls capital, not the HY count.
 - **Negative convexity.** C holds 19.5 of Agency MBS, with effective convexity of about -216 (FNMA). A ±100bp move changes surplus by +0.07 / -0.50, against +0.30 / -0.30 on a linear estimate.
 - **Combined adverse stress** (−100bp, wider spreads, BBB downgrades): C -4.35 (it was -4.62 before the scenario limits), B -4.53, A -2.04.

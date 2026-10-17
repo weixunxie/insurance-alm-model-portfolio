@@ -1,4 +1,9 @@
 {
+  "provenance": {
+    "generated": "2026-10-17",
+    "commit": "f9acbf5",
+    "dirty": true
+  },
   "inputs": {
     "total_assets": 100.0,
     "liability_pv_target": 90.00000000000001,
@@ -966,7 +971,14 @@
       "tightest_no_overlay": 1.2180538246148012,
       "tightest_with_overlay": 1.2893368942035133
     },
-    "test_count": 70,
+    "test_count": 133,
+    "binding_capital": {
+      "capital_row_binding": false,
+      "downgrade_buffer_binding": true,
+      "text": "the post-downgrade buffer (1.10 \u00d7 K), not the base C-1 charge",
+      "short": "the downgrade buffer",
+      "buffer_status": "binding"
+    },
     "C_minus_A_income": 0.627611351794495,
     "C_over_A_income": 2.0259781465286326,
     "B_minus_C_income_k": 26.528648205505377,

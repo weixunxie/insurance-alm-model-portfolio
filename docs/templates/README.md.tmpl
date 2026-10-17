@@ -76,7 +76,7 @@ All figures are in USD millions unless noted and come from [outputs/metrics.json
 
 **Optimization findings**
 
-- **Shadow price of the capital budget K: {{phase4.shadow_price_capital|.3f}}.** K appears in two rows, the C-1 charge ≤ K and the post-downgrade charge ≤ {{inputs.downgrade_buffer_multiple|.2f}}·K. So dIncome/dK = dual_capital + {{inputs.downgrade_buffer_multiple|.2f}} × dual_buffer. At the base budget, one more dollar of K adds about ${{phase4.shadow_price_capital|.2f}} a year of net spread. The value is {{phase4.frontier_shadow_at_min_budget|.2f}} at K = ${{inputs.frontier.min|.2f}}M and 0 once capital used reaches ${{phase4.frontier_capital_at_max_budget|.2f}}M, where the frontier tops out at {{phase4.frontier_income_at_max_budget|.3f}} and the HY, CLO and issuer limits bind instead.
+- **Shadow price of the capital budget K: {{phase4.shadow_price_capital|.3f}}.** K appears in two rows, the C-1 charge ≤ K and the post-downgrade charge ≤ {{inputs.downgrade_buffer_multiple|.2f}}·K. So dIncome/dK = dual_capital + {{inputs.downgrade_buffer_multiple|.2f}} × dual_buffer. At the base budget, one more dollar of K adds about ${{phase4.shadow_price_capital|.2f}} a year of net spread. The value is {{phase4.frontier_shadow_at_min_budget|.2f}} at K = ${{inputs.frontier.min|.2f}}M and 0 once capital used reaches ${{phase4.frontier_capital_at_max_budget|.2f}}M, where the frontier tops out at {{phase4.frontier_income_at_max_budget|.3f}} and the HY, CLO and issuer limits bind instead. At the base budget the binding capital row is {{report.binding_capital.text}} (dual_capital {{phase6.constraints.dual_capital|.4f}}, dual_buffer {{phase6.constraints.dual_downgrade_buffer|.4f}}).
 - **Why the LP does not swap more BBB into HY.** A ${{phase4.swap_bbb_to_bbplus.amount|.0f}}M BBB → BB+ swap earns {{phase4.swap_bbb_to_bbplus.income_gain|.2%}} of spread for {{phase4.swap_bbb_to_bbplus.capital_change|.2%}} of capital, but the HY (NAIC 3+) limit is binding with a dual of {{phase4.swap_bbb_to_bbplus.hy_max_dual|.4f}}. Priced at all binding duals, the swap's reduced cost is {{phase4.swap_bbb_to_bbplus.reduced_cost|.1e}}.
 - **CLO factor regime.**
   - (a) C's holdings repriced on the old bond factors need ${{phase4.clo_regime.C_capital_old_bond_same_holdings|.3f}}M of capital, versus ${{phase4.clo_regime.C_capital_new_2026|.3f}}M under the 2026 CLO factors.
@@ -113,7 +113,7 @@ It also adds a **downgrade buffer**: capital after a one-notch BBB-family downgr
 | Capital after one-notch BBB downgrade (limit {{report.downgrade_buffer_limit|.2f}}) | {{phase6.constraints.capital_downgraded_before|.3f}} | {{phase6.constraints.capital_downgraded_after|.3f}} |
 
 - **Binding scenario:** −100bp, with a dual of {{phase6.constraints.dual_scenario_parallel_down_100|.4f}}. Each extra dollar of allowed −100bp loss is worth about that much income a year.
-- **Downgrade buffer:** binding, with a dual of {{phase6.constraints.dual_downgrade_buffer|.4f}}.
+- **Downgrade buffer:** {{report.binding_capital.buffer_status}}, with a dual of {{phase6.constraints.dual_downgrade_buffer|.4f}}.
 - **Costs in income:** the scenario rows cost {{phase6.constraints.scenario_cost|.4f}} a year, and the downgrade buffer a further {{phase6.constraints.buffer_cost|.4f}}.
 - **Combined adverse:** before the constraints C lost more than B; after them it loses less.
 - **Optional HY-count row** (off by default): NAIC 3+ holdings after the same one-notch BBB downgrade ≤ {{inputs.limits.hy_max|.0f}}. Switching it on cuts income to {{phase6.constraints.income_with_hy_after_downgrade_limit|.4f}}, a cost of {{phase6.constraints.hy_after_downgrade_limit_cost|.4f}} a year. It forces BBB− names out, because each of them becomes 3.A.
@@ -213,6 +213,20 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
 The random seed is {{inputs.robustness.seed}} everywhere. All assumptions live in `config/`.
+
+## Dashboard
+
+An interactive Plotly Dash app in `dashboard/` reuses the model code in `src/alm` and the saved results in `outputs/`. The Optimizer page re-solves the LP live for a chosen capital budget, constraint switches and CLO factor regime. The other pages (rate risk, cash flows, capital, stress tests, robustness, methodology) show portfolios A, B and C from the saved holdings and outputs, recomputed at startup with the same code as `scripts/run_all.py` where a table is not saved.
+
+Live demo: `<Railway URL>`
+
+```bash
+.venv/bin/python -m dashboard.app      # local development server, port 8050 (or $PORT)
+```
+
+- Production, the start command in `railway.json`: `gunicorn dashboard.app:server --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120` <!-- static -->
+- Railway installs `requirements.txt` with the Python version in `.python-version`. The healthcheck path `/health` returns 503 until the model cache is built at startup, then 200.
+- After changing `config/`, rerun `scripts/run_all.py` so the saved results the dashboard reads stay in sync.
 
 ## Limitations
 

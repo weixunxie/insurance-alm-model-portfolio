@@ -23,18 +23,16 @@ from alm import plots  # noqa: E402
 from alm.bonds import (convexity, dv01, dv01_fd, effective_convexity, effective_duration,  # noqa: E402
                        fixed_cashflows, fixed_price_fn, macaulay_duration, modified_duration,
                        par_coupon, pv_on_curve, ytm, zero_cashflows)
-from alm.capital import (add_capital_factors, bucket_capital, capital_report, clo_regime_impact,  # noqa: E402
+from alm.capital import (add_capital_factors, bucket_capital, clo_regime_impact,  # noqa: E402
                          ig_to_hy_reallocation)
-from alm.cashflow_matching import (asset_cashflows, forward_rates, gap_summary, gap_table,  # noqa: E402
-                                   per_dollar_cashflows)
+from alm.cashflow_matching import per_dollar_cashflows  # noqa: E402
 from alm.config import OUTPUT_DIR, load_yaml  # noqa: E402
 from alm.curve import flat_curve, load_curve, load_key_tenors  # noqa: E402
 from alm.krd import key_rate_durations, key_rate_dv01  # noqa: E402
-from alm.krd_exposure import (bucket_krdv01, duration_gap, krd_exposure_table,  # noqa: E402
-                              surplus_scenarios)
+from alm.krd_exposure import krd_exposure_table  # noqa: E402
 from alm.liabilities import liability_price_fn, project_liabilities, truncation_diagnostics  # noqa: E402
-from alm.scenario_constraints import apply_policy_constraints  # noqa: E402
-from alm.optimizer import (budget_shadow_price, build_problem_data, efficient_frontier, is_hy,  # noqa: E402
+from alm.pipeline import build_data, portfolio_analysis  # noqa: E402
+from alm.optimizer import (budget_shadow_price, efficient_frontier, is_hy,  # noqa: E402
                            krd_tolerances,
                            shadow_cost_breakdown, solve, solve_or_diagnose)
 from alm.structured import sequential_waterfall  # noqa: E402
@@ -42,7 +40,7 @@ from alm.report import render_file  # noqa: E402
 from alm.bonds import effective_convexity as eff_conv, effective_duration as eff_dur  # noqa: E402
 from alm.curve import parallel_shift  # noqa: E402
 from alm.migration import downgrade_sensitivity  # noqa: E402
-from alm.overlay import SwapOverlay, add_overlay  # noqa: E402
+from alm.overlay import SwapOverlay  # noqa: E402
 from alm.portfolios import (bucket_allocation, load_rule_based, portfolio_summary,  # noqa: E402
                             spread_dv01_by_bucket, spread_dv01_summary)
 from alm.universe import load_assumptions, price as sec_price, price_fn as sec_price_fn, solve_coupon  # noqa: E402
@@ -141,27 +139,14 @@ def phase2(curve, keys):
 
 def analyze_portfolio(holdings, label, curve, keys, universe, liab, per_dollar, policy) -> dict:
     """Module A + Module B + capital for one portfolio; writes tables tagged by label."""
-    funding = policy["cash_flow_funding"]
     tag = label.lower().replace(" ", "_")
-    gaps = gap_table(asset_cashflows(holdings, per_dollar).to_numpy(), liab.total.to_numpy(), curve,
-                     funding["borrow_spread"], funding["beginning_cash"])
-    gaps.to_csv(TABLES / f"cashflow_gaps_{tag}.csv", index=False)
-    lpf = liability_price_fn(liab)
-    exposure = krd_exposure_table(holdings, universe, lpf, curve, keys)
-    rr = policy["rate_risk"]
-    exposure["tolerance"] = krd_tolerances(exposure.liability_krdv01 * 1000, rr["krd_floor"],
-                                           rr["krd_pct_of_liability"]) / 1000
-    exposure.to_csv(TABLES / f"krd_exposure_{tag}.csv", index=False)
-    buckets = bucket_krdv01(holdings, universe, keys)
-    buckets.to_csv(TABLES / f"krd_by_bucket_{tag}.csv")
-    dgap = duration_gap(exposure, holdings.sum(), lpf(curve))
-    scen = surplus_scenarios(holdings, universe, lpf, curve, keys,
-                             load_yaml("scenarios.yaml")["rate_scenarios"], exposure)
-    scen.to_csv(TABLES / f"surplus_scenarios_{tag}.csv", index=False)
-    cap_rows, cap = capital_report(holdings, universe, policy["capital"]["budget"])
-    cap_rows.to_csv(TABLES / f"capital_by_security_{tag}.csv")
-    return {"label": label, "holdings": holdings, "gaps": gaps, "gap_stats": gap_summary(gaps, funding["check_years"]),
-            "exposure": exposure, "buckets": buckets, "dgap": dgap, "scen": scen, "cap_rows": cap_rows, "cap": cap}
+    r = portfolio_analysis(holdings, curve, keys, universe, liab, per_dollar, policy)
+    r["gaps"].to_csv(TABLES / f"cashflow_gaps_{tag}.csv", index=False)
+    r["exposure"].to_csv(TABLES / f"krd_exposure_{tag}.csv", index=False)
+    r["buckets"].to_csv(TABLES / f"krd_by_bucket_{tag}.csv")
+    r["scen"].to_csv(TABLES / f"surplus_scenarios_{tag}.csv", index=False)
+    r["cap_rows"].to_csv(TABLES / f"capital_by_security_{tag}.csv")
+    return {"label": label, **r}
 
 
 def print_portfolio(r):
@@ -205,17 +190,6 @@ def phase3(curve, keys, universe, liab, per_dollar, policy):
     print("\n=== Phase 3: Module A + B (USD millions) ===")
     print_portfolio(r)
     return r
-
-
-def build_data(u, per_dollar, liab, curve, keys, policy, regime="new_2026", overlay=False,
-               scenario_on=None, buffer_on=None, hy_after_on=None):
-    """LP data for universe u (with cap factors), plus the policy's scenario / downgrade-buffer rows."""
-    lk = key_rate_dv01(liability_price_fn(liab), curve, keys)
-    d = build_problem_data(u, per_dollar, liab.total.to_numpy(), lk, forward_rates(curve, len(liab)), keys)
-    if overlay:
-        d = add_overlay(d, curve, load_yaml("overlay.yaml"))
-    return apply_policy_constraints(d, u, liab, curve, policy, load_yaml("scenarios.yaml"), regime,
-                                    scenario_on, buffer_on, hy_after_on)
 
 
 def phase4(curve, keys, universe, liab, per_dollar, policy, port_a):
@@ -655,12 +629,44 @@ def report_inputs(policy, liab) -> dict:
                         "residual": float(clo.loc["RESIDUAL", "factor"])}}
 
 
+def provenance() -> dict:
+    """When and from which commit these results were generated ('dirty' = uncommitted changes present)."""
+    import datetime
+    import subprocess
+    root = Path(__file__).resolve().parents[1]
+    git = lambda *args: subprocess.run(["git", *args], cwd=root, capture_output=True, text=True)
+    try:
+        head = git("rev-parse", "--short", "HEAD")
+        status = git("status", "--porcelain", "--", ".", ":(exclude)outputs", ":(exclude)README.md", ":(exclude)docs")
+        commit, dirty = (head.stdout.strip() or "unknown"), bool(status.stdout.strip())
+    except OSError:
+        commit, dirty = "unknown", False
+    return {"generated": datetime.date.today().isoformat(), "commit": commit, "dirty": dirty}
+
+
 def count_tests() -> int:
     """Number of collected pytest tests (quoted in interview notes)."""
     import subprocess
     out = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q"], capture_output=True, text=True,
                          cwd=Path(__file__).resolve().parents[1]).stdout
     return sum(1 for line in out.splitlines() if "::" in line)
+
+
+def binding_capital(m: dict) -> dict:
+    """Which capital row binds in the base-case LP (from the solver's binding flags), as doc text."""
+    rows = set(m["phase4"]["binding_constraints"])
+    cap, buf = "capital" in rows, "downgrade_buffer" in rows
+    buffer_text = f"the post-downgrade buffer ({m['inputs']['downgrade_buffer_multiple']:.2f} \u00d7 K)"
+    if buf and not cap:
+        text, short = f"{buffer_text}, not the base C-1 charge", "the downgrade buffer"
+    elif cap and not buf:
+        text, short = "the base C-1 charge (\u2264 K), not the post-downgrade buffer", "the capital row"
+    elif cap and buf:
+        text, short = f"both the base C-1 charge and {buffer_text}", "the capital row and the downgrade buffer"
+    else:
+        text, short = "neither: capital is slack at the base budget", "no capital row"
+    return {"capital_row_binding": cap, "downgrade_buffer_binding": buf, "text": text, "short": short,
+            "buffer_status": "binding" if buf else "not binding"}
 
 
 def derived_report(m: dict) -> dict:
@@ -679,6 +685,7 @@ def derived_report(m: dict) -> dict:
                       "loosest_no_overlay": sweep[lo]["no_overlay"], "loosest_with_overlay": sweep[lo]["with_overlay"],
                       "tightest_no_overlay": sweep[hi]["no_overlay"], "tightest_with_overlay": sweep[hi]["with_overlay"]},
             "test_count": count_tests(),
+            "binding_capital": binding_capital(m),
             "C_minus_A_income": p["C"]["net_spread_income"] - p["A"]["net_spread_income"],
             "C_over_A_income": p["C"]["net_spread_income"] / p["A"]["net_spread_income"],
             "B_minus_C_income_k": 1000 * (p["B"]["net_spread_income"] - p["C"]["net_spread_income"]),
@@ -759,7 +766,7 @@ def main():
     m6["prepay_sensitivity"] = {f"{p}_{c}": float(sens.loc[p, c]) for p in sens.index for c in sens.columns}
 
     m2["liability_truncation"] = truncation_diagnostics(curve)
-    metrics = {"inputs": report_inputs(policy, liab),
+    metrics = {"provenance": provenance(), "inputs": report_inputs(policy, liab),
                "phase2": m2, "phase3": {"portfolio_A": portfolio_metrics(port_a)}, "phase4": m4, "phase5": m5, "phase6": m6}
     metrics["report"] = derived_report(metrics)
     metrics["headline"] = headline(metrics)

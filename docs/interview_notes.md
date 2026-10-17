@@ -23,13 +23,13 @@ Three findings I'd highlight:
 - **The new CLO factors reshape allocations.** Under the old factors, the optimizer would hold far more BB CLO and earn 1.332.
 - **Re-optimizing on noisy inputs is a trap.** The in-sample gain of 0.0136 disappears out-of-sample.
 
-Everything is tested (70 unit tests), config-driven, and every number in the docs is generated from one metrics file.
+Everything is tested (133 unit tests), config-driven, and every number in the docs is generated from one metrics file.
 
 ## Three versions
 
 **HR / non-technical (30 seconds).** Insurers invest premiums in bonds so they can pay future claims. I built a model that picks the bond mix earning the most while respecting regulatory capital rules, interest rate risk limits and the need for cash in each year. It roughly doubles the spread income of a conservative portfolio (1.239 vs 0.612 a year on $100M) while staying inside every limit, and I documented every assumption.
 
-**Portfolio manager (1 minute).** The binding trade-offs are capital, the HY bucket and the −100bp scenario.
+**Portfolio manager (1 minute).** The binding trade-offs are capital (through the downgrade buffer), the HY bucket and the −100bp scenario.
 
 - **Capital.** One more dollar of budget is worth 0.107 a year.
 - **HY bucket.** A BBB → BB+ swap looks great on capital efficiency, but the NAIC 3+ limit is full (dual 0.0082), so its reduced cost is zero.
@@ -72,10 +72,10 @@ In the model, Portfolio A has a duration gap of only +0.53 years but a net key r
 With reinvestment at 1Y forwards and no borrowing, the cumulative balance is C = M·gap, where M is lower-triangular with compounding factors. Requiring C ≥ 0 rules out borrowing, so the recursion is exactly linear in holdings.
 
 **7. What is the shadow price of capital, and how did you check it?**
-It is the dual of the budget rows: extra net spread income per extra dollar of K, here 0.107. Because K also scales the downgrade buffer, it is dual_capital + 1.10 × dual_buffer. A test compares it to a central finite-difference re-solve. The frontier shows it falling as K grows and reaching zero once other limits bind.
+It is the dual of the budget rows: extra net spread income per extra dollar of K, here 0.107. Because K also scales the downgrade buffer, it is dual_capital + 1.10 × dual_buffer. A test compares it to a central finite-difference re-solve. At the base case the binding capital row is the post-downgrade buffer (1.10 × K), not the base C-1 charge: dual_capital = 0.0000 and dual_buffer = 0.0972. The frontier shows the shadow price falling as K grows and reaching zero once other limits bind.
 
 **8. Why doesn't the LP buy more HY when HY earns more spread per unit of capital?**
-The NAIC 3+ limit is binding (dual 0.0082). Pricing a BBB → BB+ swap at all binding duals (capital, HY room, rate rows, the BBB name's issuer-cap rent) gives a reduced cost of zero. The "0.55% spread for 1.63% capital" ratio ignores the other resources the trade uses.
+The NAIC 3+ limit is binding (dual 0.0082). Pricing a BBB → BB+ swap at all binding duals (the downgrade buffer, HY room, rate rows, the BBB name's issuer-cap rent) gives a reduced cost of zero. The "0.55% spread for 1.63% capital" ratio ignores the other resources the trade uses.
 
 **9. What do the 12/31/2026 CLO factors change?**
 They lower the charge for AAA to A tranches and raise it sharply for BBB (3.240% vs 1.523%) and BB (25.150% vs 4.537%). C's holdings need 1.191 of capital under the new factors, versus 1.047 under the old ones. Re-optimized under the old factors, the LP would hold much more BB CLO.
