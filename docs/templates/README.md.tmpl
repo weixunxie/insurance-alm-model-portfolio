@@ -218,7 +218,7 @@ The random seed is {{inputs.robustness.seed}} everywhere. All assumptions live i
 
 An interactive Plotly Dash app in `dashboard/` reuses the model code in `src/alm` and the saved results in `outputs/`. The Optimizer page re-solves the LP live for a chosen capital budget, constraint switches and CLO factor regime. The other pages (rate risk, cash flows, capital, stress tests, robustness, methodology) show portfolios A, B and C from the saved holdings and outputs, recomputed at startup with the same code as `scripts/run_all.py` where a table is not saved.
 
-Live demo: `<Railway URL>`
+Live demo: https://insurance-alm-model-portfolio-production.up.railway.app
 
 ```bash
 .venv/bin/python -m dashboard.app      # local development server, port 8050 (or $PORT)
