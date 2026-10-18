@@ -243,3 +243,15 @@ table.report tr:last-child td { border-bottom: none; }
 @media (max-width: 520px) {
   .kpi-row { grid-template-columns: 1fr; }
 }
+
+/* ---------- social links (top right of every page) ---------- */
+
+.main { position: relative; }
+.social { position: absolute; top: 24px; right: 40px; display: flex; gap: 16px; align-items: center; z-index: 10; }
+.social a { display: inline-flex; opacity: 0.85; }
+.social a:hover { opacity: 1; }
+.social img { width: 24px; height: 24px; display: block; }
+
+@media (max-width: 768px) {
+  .social { top: 16px; right: 16px; }
+}

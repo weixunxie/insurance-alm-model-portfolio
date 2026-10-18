@@ -16,6 +16,7 @@ from dashboard.pages import capital, cash_flows, methodology, optimizer, overvie
 FONTS = ("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600"
          "&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap")
 REPO_URL = "https://github.com/weixunxie/insurance-alm-model-portfolio"
+LINKEDIN_URL = "https://www.linkedin.com/in/weixun-xie-0587202b0/"
 
 # (path, nav label, layout function)
 PAGES = [
@@ -48,6 +49,14 @@ def sidebar():
     ])
 
 
+def social_links():
+    links = [(REPO_URL, "github.svg", "GitHub repository"), (LINKEDIN_URL, "linkedin.svg", "LinkedIn profile")]
+    return html.Div(className="social", children=[
+        html.A(html.Img(src=app.get_asset_url(icon), alt=label), href=url, title=label,
+               target="_blank", rel="noopener noreferrer")
+        for url, icon, label in links])
+
+
 def footer():
     return html.Footer(className="footer", children=[
         "Weixun Xie · ", html.A("github.com/weixunxie/insurance-alm-model-portfolio", href=REPO_URL)])
@@ -57,6 +66,7 @@ app.layout = html.Div([
     dcc.Location(id="url"),
     sidebar(),
     html.Main(className="main", children=[
+        social_links(),
         html.Div(className="content", children=[html.Div(DISCLAIMER, className="disclaimer"),
                                                 html.Div(id="page")]),
         footer(),
